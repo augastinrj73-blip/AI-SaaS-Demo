@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { motion } from "framer-motion";
 import { createClient } from "@/lib/supabase/client";
 import type { User } from "@supabase/supabase-js";
@@ -36,7 +36,8 @@ const CHART_BARS = [40, 65, 45, 80, 55, 70, 83];
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 export default function DashboardClient({ user }: { user: User }) {
-  const router = useRouter();
+  const router   = useRouter();
+  const pathname = usePathname();
   const [activeNav, setActiveNav] = useState("Overview");
 
   const displayName = user.user_metadata?.full_name
@@ -95,6 +96,27 @@ export default function DashboardClient({ user }: { user: User }) {
               </button>
             );
           })}
+
+          {/* Builder — route-based link */}
+          <div className="pt-2 mt-2 border-t border-white/[0.05]">
+            <Link
+              href="/dashboard/builder"
+              aria-current={pathname.startsWith("/dashboard/builder") ? "page" : undefined}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium transition-all duration-200 ${
+                pathname.startsWith("/dashboard/builder")
+                  ? "bg-indigo-500/10 text-indigo-400 border border-indigo-500/20"
+                  : "text-white/35 hover:text-white/70 hover:bg-white/[0.03] border border-transparent"
+              }`}
+            >
+              <span className={pathname.startsWith("/dashboard/builder") ? "text-indigo-400" : "text-white/25"}>
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+                    d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                </svg>
+              </span>
+              Builder
+            </Link>
+          </div>
         </nav>
 
         {/* User */}
