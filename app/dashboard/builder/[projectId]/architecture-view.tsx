@@ -58,11 +58,11 @@ function ArchitecturePlan({ arch }: { arch: ProjectArchitecture }) {
       <Card>
         <SectionHeader>Tech Stack</SectionHeader>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {Object.entries(arch.techStack).map(([category, items]) => (
+          {Object.entries(arch.techStack ?? {}).map(([category, items]) => (
             <div key={category}>
               <p className="text-[11px] text-white/30 font-medium capitalize mb-2">{category}</p>
               <div className="flex flex-wrap gap-1.5">
-                {(items as string[]).map((item) => (
+                {((items as string[]) ?? []).map((item) => (
                   <span
                     key={item}
                     className="text-[12px] px-2.5 py-1 rounded-lg glass border border-white/[0.07] text-white/60"
@@ -80,7 +80,7 @@ function ArchitecturePlan({ arch }: { arch: ProjectArchitecture }) {
       <Card>
         <SectionHeader>Pages / Screens ({arch.pages.length})</SectionHeader>
         <div className="space-y-3">
-          {arch.pages.map((page) => (
+          {(arch.pages ?? []).map((page) => (
             <div key={page.path} className="flex items-start gap-3 py-3 border-b border-white/[0.04] last:border-0">
               <code className="shrink-0 text-[12px] text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded font-mono">
                 {page.path}
@@ -89,7 +89,7 @@ function ArchitecturePlan({ arch }: { arch: ProjectArchitecture }) {
                 <p className="text-[13px] font-medium text-white/75">{page.name}</p>
                 <p className="text-[12px] text-white/35 mt-0.5">{page.description}</p>
                 <div className="flex flex-wrap gap-1 mt-1.5">
-                  {page.components.map((c) => (
+                  {(page.components ?? []).map((c) => (
                     <span key={c} className="text-[10px] text-white/25 bg-white/[0.03] border border-white/[0.05] px-1.5 py-0.5 rounded">
                       {c}
                     </span>
@@ -103,9 +103,9 @@ function ArchitecturePlan({ arch }: { arch: ProjectArchitecture }) {
 
       {/* Database */}
       <Card>
-        <SectionHeader>Database Schema ({arch.database.tables.length} tables)</SectionHeader>
+        <SectionHeader>Database Schema ({(arch.database?.tables ?? []).length} tables)</SectionHeader>
         <div className="space-y-5">
-          {arch.database.tables.map((table) => (
+          {(arch.database?.tables ?? []).map((table) => (
             <div key={table.name}>
               <div className="flex items-center gap-2 mb-2">
                 <code className="text-[13px] font-bold text-white/80 font-mono">{table.name}</code>
@@ -122,7 +122,7 @@ function ArchitecturePlan({ arch }: { arch: ProjectArchitecture }) {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/[0.04]">
-                    {table.columns.map((col) => (
+                    {(table.columns ?? []).map((col) => (
                       <tr key={col.name} className="hover:bg-white/[0.015] transition-colors">
                         <td className="px-3 py-2 font-mono text-[12px] text-white/70">{col.name}</td>
                         <td className="px-3 py-2 font-mono text-[12px] text-violet-400">{col.type}</td>
@@ -142,9 +142,9 @@ function ArchitecturePlan({ arch }: { arch: ProjectArchitecture }) {
 
       {/* API Endpoints */}
       <Card>
-        <SectionHeader>API Endpoints ({arch.apis.length})</SectionHeader>
+        <SectionHeader>API Endpoints ({(arch.apis ?? []).length})</SectionHeader>
         <div className="space-y-2">
-          {arch.apis.map((api, i) => (
+          {(arch.apis ?? []).map((api, i) => (
             <div key={i} className="flex items-center gap-3 py-2.5 border-b border-white/[0.04] last:border-0">
               <span className={`shrink-0 text-[11px] font-bold px-2 py-0.5 rounded font-mono ${
                 METHOD_COLOR[api.method] ?? "text-white/40 bg-white/5"
@@ -169,7 +169,7 @@ function ArchitecturePlan({ arch }: { arch: ProjectArchitecture }) {
         <p className="text-[14px] font-medium text-white/75 mb-1">{arch.authStrategy.method}</p>
         <p className="text-[13px] text-white/35 mb-3">{arch.authStrategy.description}</p>
         <div className="flex flex-wrap gap-2">
-          {arch.authStrategy.providers.map((p) => (
+          {(arch.authStrategy?.providers ?? []).map((p) => (
             <span key={p} className="text-[12px] px-2.5 py-1 rounded-lg glass border border-indigo-500/20 text-indigo-400">
               {p}
             </span>
@@ -181,7 +181,7 @@ function ArchitecturePlan({ arch }: { arch: ProjectArchitecture }) {
       <Card>
         <SectionHeader>Suggested Next Steps</SectionHeader>
         <ol className="space-y-2.5">
-          {arch.suggestedNextSteps.map((step, i) => (
+          {(arch.suggestedNextSteps ?? []).map((step, i) => (
             <li key={i} className="flex items-start gap-3">
               <span className="shrink-0 w-6 h-6 rounded-full bg-indigo-500/15 border border-indigo-500/25 flex items-center justify-center text-[11px] font-bold text-indigo-400">
                 {i + 1}
@@ -199,6 +199,11 @@ export default function ArchitectureView({ project: initialProject }: { project:
   const [project, setProject] = useState(initialProject);
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState<string | null>(null);
+
+  // Code generation state — pre-fill from DB if already generated
+  const [code, setCode]           = useState<string | null>(initialProject.generated_code ?? null);
+  const [codeLoading, setCodeLoading] = useState(false);
+  const [codeError, setCodeError]     = useState<string | null>(null);
 
   const generate = useCallback(async () => {
     setLoading(true);
@@ -220,6 +225,36 @@ export default function ArchitectureView({ project: initialProject }: { project:
     }
   }, [project.id]);
 
+  const generateCode = useCallback(async () => {
+    setCodeLoading(true);
+    setCodeError(null);
+    try {
+      const res = await fetch("/api/generate-code", {
+        method:  "POST",
+        headers: { "content-type": "application/json" },
+        body:    JSON.stringify({ projectId: project.id }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Code generation failed");
+      setCode(data.code);
+    } catch (err) {
+      setCodeError(err instanceof Error ? err.message : "Something went wrong.");
+    } finally {
+      setCodeLoading(false);
+    }
+  }, [project.id]);
+
+  function downloadCode() {
+    if (!code) return;
+    const blob = new Blob([code], { type: "text/html" });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement("a");
+    a.href     = url;
+    a.download = `${project.name.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}.html`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   // Auto-start if still in draft state on mount
   useEffect(() => {
     if (project.status === "draft") generate();
@@ -240,7 +275,7 @@ export default function ArchitectureView({ project: initialProject }: { project:
         </div>
         <div className="text-center">
           <p className="text-[15px] font-semibold text-white">Generating architecture plan…</p>
-          <p className="text-[13px] text-white/30 mt-1">Claude is designing your tech stack, schema, and API — this takes ~15 seconds.</p>
+          <p className="text-[13px] text-white/30 mt-1">Gemini is designing your tech stack, schema, and API — this takes ~15 seconds.</p>
         </div>
       </div>
     );
@@ -273,7 +308,31 @@ export default function ArchitectureView({ project: initialProject }: { project:
   if (project.status === "ready" && project.architecture) {
     return (
       <div>
-        <div className="flex justify-end mb-4">
+        {/* Toolbar */}
+        <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
+          <div className="flex items-center gap-2">
+            {project.project_type === "website" && (
+              <button
+                onClick={generateCode}
+                disabled={codeLoading}
+                className="btn-primary px-4 py-2 rounded-xl text-[13px] font-medium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {codeLoading ? (
+                  <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden>
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                ) : (
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+                      d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                  </svg>
+                )}
+                {codeLoading ? "Generating code…" : code ? "Regenerate code" : "Generate Code"}
+              </button>
+            )}
+          </div>
+
           <button
             onClick={generate}
             className="btn-ghost px-4 py-2 rounded-xl text-[13px] flex items-center gap-2"
@@ -285,6 +344,47 @@ export default function ArchitectureView({ project: initialProject }: { project:
             Regenerate plan
           </button>
         </div>
+
+        {/* Code generation error */}
+        {codeError && (
+          <div className="mb-4 glass border border-red-500/20 rounded-xl px-4 py-3 text-[13px] text-red-400">
+            {codeError}
+          </div>
+        )}
+
+        {/* Live preview */}
+        {code && (
+          <div className="mb-8 glass border border-white/[0.07] rounded-2xl overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.06]">
+              <div className="flex items-center gap-2.5">
+                <span className="text-[11px] font-semibold text-white/25 uppercase tracking-wider">
+                  Live Preview
+                </span>
+                <span className="text-[10px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">
+                  Generated
+                </span>
+              </div>
+              <button
+                onClick={downloadCode}
+                className="btn-ghost px-3 py-1.5 rounded-lg text-[12px] flex items-center gap-1.5"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                Download HTML
+              </button>
+            </div>
+            <iframe
+              srcDoc={code}
+              sandbox="allow-scripts"
+              className="w-full border-0 bg-white"
+              style={{ height: "620px" }}
+              title="Generated website preview"
+            />
+          </div>
+        )}
+
         <ArchitecturePlan arch={project.architecture} />
       </div>
     );

@@ -58,6 +58,7 @@ export interface Project {
   project_type: ProjectType;
   status: ProjectStatus;
   architecture: ProjectArchitecture | null;
+  generated_code: string | null;
   error_message: string | null;
   created_at: string;
   updated_at: string;

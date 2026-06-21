@@ -70,6 +70,17 @@ export async function updateProjectStatus(
   if (error) throw new Error(error.message);
 }
 
+export async function saveGeneratedCode(id: string, code: string): Promise<void> {
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("projects")
+    .update({ generated_code: code })
+    .eq("id", id);
+
+  if (error) throw new Error(error.message);
+}
+
 export async function deleteProject(id: string): Promise<void> {
   const supabase = await createClient();
 
